@@ -1,0 +1,38 @@
+name: Fedora Latest
+
+on: [push]
+  
+jobs:
+  test:
+    name: fedora
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Setup
+        run: |
+          sudo apt update
+          sudo apt-get -y install podman git
+          podman pull fedora:latest
+      - name: Get source
+        uses: actions/checkout@v3
+        with:
+          path: 'viamd'
+      - name: Prepare
+        run: |
+          cd viamd
+          git submodule update --init --recursive
+      - name: Create container and build
+        run: |
+          {
+              echo 'FROM fedora:latest'
+              echo 'RUN dnf -y update'
+              echo 'RUN dnf -y install cmake gcc-c++ gtk3-devel libstdc++-devel'
+              echo 'RUN dnf -y install libstdc++-static libXcursor-devel libXinerama-devel'
+              echo 'RUN dnf -y install libXrandr-devel libX11-devel pkgconf'
+              echo 'RUN dnf clean all'
+              echo 'COPY viamd viamd'
+              echo 'WORKDIR /viamd'
+              echo 'RUN cmake -B builddir .'
+              echo 'RUN cmake --build builddir' 
+          } > podmanfile
+          podman build --tag fedoralatest -f ./podmanfile
